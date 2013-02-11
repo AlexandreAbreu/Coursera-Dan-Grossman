@@ -49,21 +49,21 @@ fun longest_string2(sl: string list) =
     List.foldl (fn (s, acc) => if String.size s >= String.size acc then s else acc) "" sl
 
 (* 4. *)
-fun longest_string_helper(f, sl) =
+fun longest_string_helper f sl =
     List.foldl (fn (s, acc) => if f(String.size s, String.size acc) then s else acc) "" sl
     
 fun longest_string3(sl: string list) =
     let
         val greater = fn (a, b) => a > b
     in
-        longest_string_helper(greater, sl)
+        longest_string_helper greater sl
     end
 
 fun longest_string4(sl: string list) =
     let
         val greater_or_equal = fn (a, b) => a > b
     in
-        longest_string_helper(greater_or_equal, sl)
+        longest_string_helper greater_or_equal sl
     end
 
 (* 5. *)
@@ -102,49 +102,49 @@ val it = "654 321" : string
 *)
 
 (* 7 *)
-fun first_answer(f, xs) =
+fun first_answer f xs =
     case xs of
         [] => raise NoAnswer
       | x::xs => case f(x) of
-                     NONE => first_answer(f, xs)
+                     NONE => first_answer f xs
                    | SOME v => v
 
 (*
-- first_answer(fn a => NONE, []);
+- first_answer (fn a => NONE) [];
 uncaught exception NoAnswer
   raised at: hw3.sml:107.21-107.29
-- first_answer(fn a => NONE, [1, 2, 3]);
+- first_answer (fn a => NONE) [1, 2, 3];
 uncaught exception NoAnswer
   raised at: hw3.sml:107.21-107.29
-- first_answer(fn a => if a = 3 then SOME a else NONE, [1, 2, 3]);
+- first_answer (fn a => if a = 3 then SOME a else NONE) [1, 2, 3];
 val it = 3 : int
-- first_answer(fn a => if a = 3 then SOME a else NONE, [1, 2, 3, 4, 5]);
+- first_answer (fn a => if a = 3 then SOME a else NONE) [1, 2, 3, 4, 5];
 val it = 3 : int
 *)
 
 
 (* 8. *)
-fun all_answers(f, lst) =
+fun all_answers f lst =
     let
         fun f_int (f, lst, acc) = case lst of
                                       [] => SOME acc
                                     | x::xs => case f(x) of
                                                    NONE => NONE
-                                                 | SOME v => f_int(f, xs, acc @ [v])
+                                                 | SOME v => f_int(f, xs, v @ acc)
     in
         f_int(f, lst, [])
     end
 
 (*
-- all_answers(fn a => if a = 0 then NONE else SOME a, []);
+- all_answers(fn a => if a = 0 then NONE else SOME [a]) [];
 val it = SOME [] : int list option
-- all_answers(fn a => if a = 0 then NONE else SOME a, [1, 2]);
+- all_answers(fn a => if a = 0 then NONE else SOME [a]) [1, 2];
 val it = SOME [1,2] : int list option
-- all_answers(fn a => if a = 0 then NONE else SOME a, [1, 2, 3, 4]);
+- all_answers(fn a => if a = 0 then NONE else SOME [a]) [1, 2, 3, 4];
 val it = SOME [1,2,3,4] : int list option
-- all_answers(fn a => if a = 0 then NONE else SOME a, [1, 2, 0, 4]);
+- all_answers(fn a => if a = 0 then NONE else SOME [a]) [1, 2, 0, 4];
 val it = NONE : int list option
-- all_answers(fn a => if a = 0 then NONE else SOME a, [1, 2, 4]);
+- all_answers(fn a => if a = 0 then NONE else SOME [a]) [1, 2, 4];
 val it = SOME [1,2,4] : int list option
 *)
 
@@ -218,35 +218,34 @@ val it = true : bool
 val it = true : bool
 *)
 
-
-datatype pattern = Wildcard
-		 | Variable of string
-		 | UnitP
-		 | ConstP of int
-		 | TupleP of pattern list
-		 | ConstructorP of string * pattern
-
-datatype valu = Const of int
-	      | Unit
-	      | Tuple of valu list
-	      | Constructor of string * valu
-
 (* 11. *)
 fun match(v: valu, p: pattern) =
-    let
-        fun f = case p of
-                    Variable x        => f x
-                  | TupleP ps         => all_answers (fn (p,i) => (r p) + i) 0 ps
-                  | ConstructorP(_,p) => r p
-                  | _                 => if 
-    in
-        ListPair.zip(f())
-    end
-
-
+    case p of
+        Variable x => SOME [(x, v)]
+      | UnitP =>
+        (case v of
+             Unit => SOME []
+           | _ => NONE)
+      | Wildcard => SOME []
+      | ConstP k =>
+        (case v of
+             Const(v) => if k = v then SOME [] else NONE
+           | _ => NONE)
+      | TupleP ps =>
+        (case v of
+             Tuple(vs) => if List.length vs = List.length ps
+                          then all_answers match (ListPair.zip(vs, ps))
+                          else NONE
+           | _ => NONE)
+      | ConstructorP(s1,pp) =>
+        (case v of
+             Constructor(s2,vv) =>
+             if s1 = s2 then match(vv,pp) else NONE
+           | _ => NONE)
+            
 (* 12. *)
-fun first_match(v: valu, ps: pattern list) =
-    first_answer(fn p => match(v, p), ps) handle NoAnswer => NONE
+fun first_match v ps =
+    SOME(first_answer (fn p => match(v, p)) ps) handle NoAnswer => NONE
 
 (* Challenge *)
 (* fun typecheck_patterns *)
